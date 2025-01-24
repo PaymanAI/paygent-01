@@ -19,3 +19,8 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure the toggle has proper z-index and cursor */
+.relative.inline-block {
+  z-index: 1;
+}

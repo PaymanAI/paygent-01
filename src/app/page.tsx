@@ -13,12 +13,18 @@ import type { ApiInfo } from "./components/types";
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [showLiveModeModal, setShowLiveModeModal] = useState(false);
 
   // Load API key from localStorage on mount
   useEffect(() => {
     const storedApiKey = localStorage.getItem("paymanApiKey");
     if (storedApiKey) {
       setApiKey(storedApiKey);
+    }
+    const storedMode = localStorage.getItem("paymanMode");
+    if (storedMode === "live") {
+      setIsLiveMode(true);
     }
   }, []);
 
@@ -77,6 +83,7 @@ export default function Home() {
           toolCall.toolName
         } with parameters: ${JSON.stringify(toolCall.args)}`;
       } catch (error) {
+        console.error("Tool call error:", error);
         return JSON.stringify({
           error:
             error instanceof Error
@@ -87,6 +94,8 @@ export default function Home() {
       }
     },
     onResponse(response) {
+      console.log("Response status:", response.status, response.ok);
+
       if (!response.ok) {
         setError(
           "Failed to get response. Please check your API key and try again."
@@ -97,6 +106,8 @@ export default function Home() {
     },
     onFinish(message) {
       // Only append a message if there's actual content and it's not an error response
+      console.log("Finished message:", message);
+
       if (
         message.content &&
         message.content.trim() !== "" &&
@@ -106,9 +117,22 @@ export default function Home() {
       }
     },
     onError(error) {
-      // Only set the error state, don't append to chat
+      console.error("Full error object:", error);
+      console.error("Error stack:", error.stack);
+      // Get any additional error properties
+      if (error instanceof Error) {
+        console.error("Error cause:", error.cause);
+        // Log any custom properties that might exist
+        console.error(
+          "Additional properties:",
+          Object.getOwnPropertyNames(error)
+        );
+      }
+
       const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
+        error instanceof Error
+          ? `${error.message} (${error.cause || "no cause"})`
+          : "An unexpected error occurred";
       setError(errorMessage);
     },
   });
@@ -253,43 +277,63 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen bg-gray-50">
-      <div className="w-[300px] border-r border-gray-200 bg-white flex flex-col">
-        <ConfigSection apiKey={apiKey} setApiKey={handleApiKeyChange} />
-        <QuickActions
-          onActionSelect={(query) => append({ content: query, role: "user" })}
-        />
-      </div>
+    <div className="flex flex-col h-screen">
+      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <div className="flex items-center space-x-2">
+          <img src="/logo.svg" alt="Paygent Logo" className="h-8 w-8" />
+          <span className="text-xl font-semibold text-gray-900">Paygent</span>
+        </div>
+      </header>
+      <main className="flex h-screen bg-gray-50">
+        <div className="w-[300px] border-r border-gray-200 bg-white flex flex-col">
+          <ConfigSection apiKey={apiKey} setApiKey={handleApiKeyChange} />
+          <QuickActions
+            onActionSelect={(query) => append({ content: query, role: "user" })}
+          />
+        </div>
 
-      <div className="flex-1 flex flex-col">
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-xl font-semibold text-gray-900">
-              AI Payment Assistant
-            </h1>
+        <div className="flex-1 flex flex-col">
+          <div className="bg-white border-b border-payman-neutral/30">
+            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+              <div className="text-center flex justify-center items-center ">
+                <h1 className="text-5xl font-bold text-charcoal-700 tracking-tight m-auto">
+                  PAYGENT
+                  <span className="text-payman-primary relative">
+                    .
+                    <span className="relative inline-block px-[2px]">
+                      0
+                      <span className="absolute inset-0 flex items-center justify-center overflow-visible">
+                        <span className="h-[4px] w-[100%] bg-payman-primary rotate-[-70deg] block absolute transform -translate-y-[1px]" />
+                      </span>
+                    </span>
+                    1
+                  </span>
+                </h1>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden">
+            <ChatInterface
+              messages={messages}
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              handleInputKeyDown={handleInputKeyDown}
+              messagesEndRef={messagesEndRef}
+              error={error}
+              isLoading={isLoading}
+            />
+            <ToolCallsPanel
+              messages={messages}
+              toolCallsEndRef={toolCallsEndRef}
+              getApiInfo={getApiInfo}
+              formatToolCallResult={formatToolCallResult}
+              addToolResult={addToolResult}
+            />
           </div>
         </div>
-
-        <div className="flex-1 flex overflow-hidden">
-          <ChatInterface
-            messages={messages}
-            input={input}
-            handleInputChange={handleInputChange}
-            handleSubmit={handleSubmit}
-            handleInputKeyDown={handleInputKeyDown}
-            messagesEndRef={messagesEndRef}
-            error={error}
-            isLoading={isLoading}
-          />
-          <ToolCallsPanel
-            messages={messages}
-            toolCallsEndRef={toolCallsEndRef}
-            getApiInfo={getApiInfo}
-            formatToolCallResult={formatToolCallResult}
-            addToolResult={addToolResult}
-          />
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

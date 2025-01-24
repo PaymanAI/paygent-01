@@ -79,12 +79,12 @@ export function ToolCallsPanel({
   addToolResult,
 }: ToolCallsPanelProps) {
   return (
-    <div className="w-[400px] border-l border-gray-200 bg-gray-50 flex flex-col">
-      <div className="bg-payman-primary text-white px-6 py-4 border-b border-payman-neutral/10">
-        <div className="flex items-center space-x-2">
+    <div className="w-[400px] border-l border-gray-200 bg-gradient-to-br from-gray-50 to-white flex flex-col">
+      <div className="p-4 bg-payman-primary/5 border-b border-payman-primary/20">
+        <div className="flex items-center space-x-3">
           {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
           <svg
-            className="w-5 h-5 text-white/90"
+            className="w-5 h-5 text-payman-primary"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -97,7 +97,12 @@ export function ToolCallsPanel({
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          <h2 className="text-lg font-semibold">Tool Calls</h2>
+          <div>
+            <h2 className="text-sm font-medium text-gray-900">Tool Calls</h2>
+            <p className="text-xs text-gray-700 mt-0.5">
+              System operations and responses
+            </p>
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
