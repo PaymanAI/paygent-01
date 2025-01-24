@@ -11,8 +11,14 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        payman: {
+          primary: '#FF7D61',
+          secondary: '#FFD4A6',
+          neutral: '#E6E6E6',
+          dark: '#121212',
+        }
       },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/typography')],
 } satisfies Config;
