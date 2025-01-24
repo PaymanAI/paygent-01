@@ -1,15 +1,16 @@
 # Paygent.01 - AI-Powered Money Movement Made Easy
 
-Paygent.01 is a modern web application that combines the power of AI with Payman's payment infrastructure to make moving money a breeze. Built with Next.js 13+, Tailwind CSS, and TypeScript, it provides a seamless chat interface for handling financial transactions through natural language.
+Paygent.01 is an open-source project that combines the power of AI with Payman's payment infrastructure to make moving money a breeze.
+
+Built with Vercel AI SDK, Payman, and OpenAI, Paygent.01 empowers anyone to send and receive money effortlessly.
+
+Just spin up the app, add your Payman API key and you're ready to go!
 
 ## ✨ Features
 
 - 🤖 AI-powered chat interface for natural language money movement
 - 🔄 Support for both OpenAI and Anthropic AI models
 - 💸 Seamless integration with Payman's payment infrastructure
-- 🎨 Modern, responsive UI with Tailwind CSS
-- 🔒 Secure environment configuration
-- 🌓 Dark/Light mode support
 
 ## 🚀 Quick Start
 
@@ -23,14 +24,24 @@ npm install
 
 ### 2. Configure Environment Variables
 
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-PAYMAN_API_KEY=your_payman_api_key
+Either in your dashboard or in a `.env` file, set the following environment variables:
+
+Choose one of openai or anthropic for the key type:
+
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `ANTHROPIC_API_KEY`: Your Anthropic API key
+- `PAYMAN_API_KEY`: Your Payman API key
 
 ### 3. Run the App
 
 ```bash
 npm run dev
 ```
+
+### 4. Switch to Live Mode (Move Real Money)!
+
+To switch to live mode toggle the switch in the top right corner of the app.
+
+**Note:** Live mode requires an active Payman API key. Go to https://app.paymanai.com to get one.
 
 You can now copy this entire code block and paste it directly into your README.md file. The markdown formatting will be preserved and will render properly on GitHub.

@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       model:
         provider === "openai"
           ? openaiClient("gpt-4-turbo")
-          : anthropicClient("claude-3-haiku-20240307"),
+          : anthropicClient("claude-3-5-sonnet-20241022"),
       system:
         "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. Use the available tools to interact with the payment system when needed.",
       messages,
