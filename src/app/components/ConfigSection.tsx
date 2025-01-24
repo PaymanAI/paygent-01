@@ -2,55 +2,92 @@ import React, { useState, useEffect } from "react";
 import type { ConfigSectionProps } from "./types";
 import { toast } from "react-hot-toast";
 
-export function ConfigSection({ apiKey, setApiKey }: ConfigSectionProps) {
+export function ConfigSection({
+  apiKey,
+  setApiKey,
+  provider,
+  setProvider,
+  paymanApiKey,
+  setPaymanApiKey,
+}: ConfigSectionProps) {
   const [isKeySaved, setIsKeySaved] = useState(false);
+  const [isPaymanKeySaved, setIsPaymanKeySaved] = useState(false);
   const [error, setError] = useState("");
-  const [isLiveMode, setIsLiveMode] = useState(false);
-  const [showLiveModeModal, setShowLiveModeModal] = useState(false);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem("paymanApiKey");
-    const savedMode = localStorage.getItem("paymanMode");
-    setIsKeySaved(!!savedKey);
-    if (savedMode === "live") setIsLiveMode(true);
-  }, []);
+    const savedProvider =
+      (localStorage.getItem("aiProvider") as "openai" | "anthropic") ||
+      "openai";
+    const savedKey = localStorage.getItem(`${savedProvider}ApiKey`);
+    const savedPaymanKey = localStorage.getItem("paymanApiKey");
+
+    setProvider(savedProvider);
+    if (savedKey) {
+      setApiKey(savedKey);
+      setIsKeySaved(true);
+    }
+    if (savedPaymanKey) {
+      setPaymanApiKey(savedPaymanKey);
+      setIsPaymanKeySaved(true);
+    }
+  }, [setApiKey, setProvider, setPaymanApiKey]);
 
   const handleSaveKey = () => {
+    console.log("Save Keys button clicked");
     const trimmedValue = apiKey.trim();
+    const trimmedPaymanValue = paymanApiKey.trim();
+
     if (!trimmedValue) {
-      setError("Please enter an API key");
+      setError("Please enter an API key for the selected AI provider");
       setIsKeySaved(false);
-      localStorage.removeItem("paymanApiKey");
-      toast.error("Please enter an API key");
+      localStorage.removeItem(`${provider}ApiKey`);
+      toast.error("Please enter an API key for the selected AI provider");
       return;
     }
+
+    if (!trimmedPaymanValue) {
+      setError("Please enter your Payman API key");
+      setIsPaymanKeySaved(false);
+      localStorage.removeItem("paymanApiKey");
+      toast.error("Please enter your Payman API key");
+      return;
+    }
+
     setError("");
     setApiKey(trimmedValue);
-    localStorage.setItem("paymanApiKey", trimmedValue);
-    localStorage.setItem("paymanMode", isLiveMode ? "live" : "test");
+    setPaymanApiKey(trimmedPaymanValue);
+    localStorage.setItem(`${provider}ApiKey`, trimmedValue);
+    localStorage.setItem("paymanApiKey", trimmedPaymanValue);
+    localStorage.setItem("aiProvider", provider);
     setIsKeySaved(true);
+    setIsPaymanKeySaved(true);
     toast.success("Settings saved successfully");
   };
 
-  const handleModeToggle = (newMode: boolean) => {
-    if (newMode) {
-      setShowLiveModeModal(true);
+  const handleProviderChange = (newProvider: "openai" | "anthropic") => {
+    console.log("handleProviderChange called with:", newProvider);
+    setProvider(newProvider);
+    const savedKey = localStorage.getItem(`${newProvider}ApiKey`);
+    if (savedKey) {
+      setApiKey(savedKey);
+      setIsKeySaved(true);
     } else {
-      setIsLiveMode(false);
+      setApiKey("");
+      setIsKeySaved(false);
     }
   };
 
   return (
-    <div className="h-screen overflow-y-auto p-6 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-white">
-      <h2 className="text-base font-semibold text-gray-900 mb-4">
+    <div className="p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+      <h2 className="text-sm font-semibold text-gray-900 mb-3">
         Configuration
       </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Info Section */}
-        <div className="p-4 bg-payman-primary/5 rounded-xl border border-payman-primary/20">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-5 h-5 mt-0.5">
+        <div className="p-3 bg-payman-primary/5 rounded-lg border border-payman-primary/20">
+          <div className="flex items-start space-x-2">
+            <div className="flex-shrink-0 w-4 h-4 mt-0.5">
               {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -66,11 +103,15 @@ export function ConfigSection({ apiKey, setApiKey }: ConfigSectionProps) {
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-900">
-                Get Your AI Cash Account
+              <h3 className="text-xs font-medium text-gray-900">
+                Configure Your Paygent
               </h3>
+              <p className="mt-0.5 text-xs text-gray-700">
+                1. Choose your AI provider (OpenAI or Anthropic) and enter your
+                API key.
+              </p>
               <p className="mt-1 text-xs text-gray-700">
-                Sign up at{" "}
+                2. Sign up at{" "}
                 <a
                   href="https://app.paymanai.com"
                   target="_blank"
@@ -79,30 +120,73 @@ export function ConfigSection({ apiKey, setApiKey }: ConfigSectionProps) {
                 >
                   app.paymanai.com
                 </a>{" "}
-                to create your AI Cash Account and get your API key. Your key
-                lets you spend money right from this app!
+                to get your API key to give your Paygent a cash account.
               </p>
             </div>
           </div>
         </div>
 
-        {/* API Key Input */}
-        <div className="p-4 bg-white/80 rounded-xl shadow-sm border border-gray-100">
+        {/* Provider Selection */}
+        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
+          {/* biome-ignore lint/a11y/noLabelWithoutControl: <explanation> */}
+          <label className="block text-xs font-medium text-gray-800 mb-1.5">
+            AI Provider
+          </label>
+          <div className="flex space-x-2">
+            {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log("OpenAI button clicked");
+                handleProviderChange("openai");
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
+                provider === "openai"
+                  ? "bg-payman-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              OpenAI
+            </button>
+            {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log("Anthropic button clicked");
+                handleProviderChange("anthropic");
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
+                provider === "anthropic"
+                  ? "bg-payman-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Anthropic
+            </button>
+          </div>
+        </div>
+
+        {/* AI Provider Key Input */}
+        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
           <label
             htmlFor="apiKey"
-            className="block text-sm font-medium text-gray-800 mb-2"
+            className="block text-xs font-medium text-gray-800 mb-1.5"
           >
-            Payman API Key
+            {provider === "openai" ? "OpenAI" : "Anthropic"} API Key
           </label>
           <input
             id="apiKey"
             type="password"
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(e) => {
+              console.log("API key changed");
+              setApiKey(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const trimmedValue = e.currentTarget.value.trim();
-                setApiKey(trimmedValue);
+                handleSaveKey();
               }
             }}
             onBlur={(e) => {
@@ -111,167 +195,57 @@ export function ConfigSection({ apiKey, setApiKey }: ConfigSectionProps) {
                 setApiKey(trimmedValue);
               }
             }}
-            className="w-full px-3 py-2 bg-gray-50/50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary transition-all duration-300"
-            placeholder="Enter your API key"
-            autoComplete="off"
-            spellCheck="false"
+            className="w-full px-2 py-1.5 bg-gray-50/50 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary transition-all duration-300"
+            placeholder={`Enter your ${
+              provider === "openai" ? "OpenAI" : "Anthropic"
+            } API key`}
           />
         </div>
 
-        {/* Payment Mode Toggle */}
-        <div className="p-4 bg-white/80 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              {/* biome-ignore lint/a11y/noLabelWithoutControl: <explanation> */}
-              <label className="text-sm font-medium text-gray-800">
-                Move Real Money
-              </label>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {isLiveMode
-                  ? "Live payments enabled"
-                  : "You know you want to press it"}
-              </p>
-            </div>
-            <div className="relative inline-block w-12 align-middle select-none">
-              <input
-                type="checkbox"
-                checked={isLiveMode}
-                onChange={(e) => handleModeToggle(e.target.checked)}
-                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white shadow-md appearance-none cursor-pointer transition-transform duration-300 ease-in-out"
-              />
-              {/* biome-ignore lint/a11y/noLabelWithoutControl: <explanation> */}
-              <label
-                className={`toggle-label block h-6 overflow-hidden rounded-full cursor-pointer transition-all duration-300 ease-in-out ${
-                  isLiveMode ? "bg-payman-primary" : "bg-gray-200"
-                }`}
-              />
-            </div>
-          </div>
+        {/* Payman API Key Input */}
+        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
+          <label
+            htmlFor="paymanApiKey"
+            className="block text-xs font-medium text-gray-800 mb-1.5"
+          >
+            Payman API Key
+          </label>
+          <input
+            id="paymanApiKey"
+            type="password"
+            value={paymanApiKey}
+            onChange={(e) => {
+              console.log("Payman API key changed");
+              setPaymanApiKey(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSaveKey();
+              }
+            }}
+            onBlur={(e) => {
+              const trimmedValue = e.target.value.trim();
+              if (trimmedValue !== e.target.value) {
+                setPaymanApiKey(trimmedValue);
+              }
+            }}
+            className="w-full px-2 py-1.5 bg-gray-50/50 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary transition-all duration-300"
+            placeholder="Enter your Payman API key"
+          />
+          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
         </div>
 
         {/* Save Button */}
-        {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-        <button
-          onClick={handleSaveKey}
-          className="w-full px-4 py-3 bg-payman-primary text-white rounded-lg hover:bg-payman-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-payman-primary/30 transition-all duration-300 text-sm font-medium shadow-lg shadow-payman-primary/20"
-        >
-          Save Configuration
-        </button>
-
-        {/* Status Messages */}
-        {error && (
-          <div className="flex justify-center">
-            <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-800 border border-red-100 shadow-sm">
-              {error}
-            </span>
-          </div>
-        )}
-        {isKeySaved && !error && (
-          <div className="flex justify-center">
-            <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-800 border border-green-100 shadow-sm">
-              Configuration Saved
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Live Mode Confirmation Modal */}
-      {showLiveModeModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-300">
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-payman-primary to-payman-primary/70 flex items-center justify-center shadow-xl shadow-payman-primary/30">
-                {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  🚀 Hold Up Crazy B*stard!
-                </h3>
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                    Well, well, well… looks like you’re about to trust an AI
-                    with your hard-earned cash. Bold move, my friend—next stop:
-                    letting it name your firstborn. Are you ready to live life
-                    on the wild side?
-                  </p>
-                  <ul className="text-left text-sm space-y-3">
-                    <li className="flex items-center text-gray-700">
-                      <span className="w-2 h-2 bg-payman-primary rounded-full mr-3" />
-                      Your transactions will be smoother than a buttered penguin
-                      on ice
-                    </li>
-                    <li className="flex items-center text-gray-700">
-                      <span className="w-2 h-2 bg-payman-primary rounded-full mr-3" />
-                      Real cash moves, because playing in the kiddie pool is for
-                      amateurs
-                    </li>
-                    <li className="flex items-center text-gray-700">
-                      <span className="w-2 h-2 bg-payman-primary rounded-full mr-3" />
-                      Your accountant's about to call it quits (or demand hazard
-                      pay)
-                    </li>
-                  </ul>
-                  <p className="text-gray-600 text-sm mt-4 italic">
-                    It's not too late to back out... but where's the fun in
-                    that? 😎
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col w-full space-y-3 pt-4">
-                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-                <button
-                  onClick={() => {
-                    setIsLiveMode(true);
-                    setShowLiveModeModal(false);
-                  }}
-                  className="w-full px-6 py-4 bg-payman-primary text-white rounded-xl hover:bg-payman-primary/90 transition-all duration-300 font-medium shadow-lg shadow-payman-primary/20"
-                >
-                  Let’s Ruin My Accountant’s Life! 🚀
-                </button>
-                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-                <button
-                  onClick={() => {
-                    setIsLiveMode(false);
-                    setShowLiveModeModal(false);
-                  }}
-                  className="w-full px-6 py-4 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl transition-all duration-300"
-                >
-                  Maybe I'll Stick to Monopoly Money 😅
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSaveKey}
+            className="px-3 py-1.5 bg-payman-primary text-white rounded-md text-xs font-medium hover:bg-payman-primary/90 transition-colors duration-300 cursor-pointer z-10 relative"
+          >
+            {isKeySaved && isPaymanKeySaved ? "Update Keys" : "Save Keys"}
+          </button>
         </div>
-      )}
-
-      <style jsx>{`
-        .toggle-checkbox:checked {
-          transform: translateX(100%);
-          border-color: #68d391;
-        }
-        .toggle-label {
-          transition: all 0.3s ease-in-out;
-        }
-        .toggle-checkbox {
-          transform: translateX(0);
-          z-index: 1;
-        }
-      `}</style>
+      </div>
     </div>
   );
 }

@@ -24,3 +24,24 @@ body {
 .relative.inline-block {
   z-index: 1;
 }
+
+/* Toggle Switch Styles */
+.toggle-checkbox {
+  right: 0;
+  z-index: 1;
+  border: 2px solid transparent;
+  transition: all 0.3s ease-in-out;
+}
+
+.toggle-checkbox:checked {
+  right: 24px;
+  border-color: #fff;
+}
+
+.toggle-label {
+  width: 48px;
+}
+
+.toggle-checkbox:focus {
+  outline: none;
+}

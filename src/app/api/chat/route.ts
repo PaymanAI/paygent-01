@@ -18,10 +18,13 @@ export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, provider } = await req.json();
 
     const result = streamText({
-      model: anthropic("claude-3-haiku-20240307"),
+      model:
+        provider === "openai"
+          ? openai("gpt-4-turbo")
+          : anthropic("claude-3-haiku-20240307"),
       system:
         "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. Use the available tools to interact with the payment system when needed.",
       messages,
