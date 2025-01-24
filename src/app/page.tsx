@@ -201,12 +201,11 @@ export default function Home() {
     };
 
     const endpointMap: { [key: string]: string } = {
-      searchDestinations: "/v1/payments/destinations",
-      createPayee: "/v1/payments/payees",
-      initiateDeposit: "/v1/payments/deposits",
-      makePayment: "/v1/payments/send",
-      getBalance: "/v1/balances",
-      confirmPayment: "/v1/payments/confirm",
+      searchDestinations: "/payments/search-destinations",
+      createPayee: "/payments/destinations",
+      initiateDeposit: "/payments/customer-deposit-link",
+      makePayment: "/payments/send-payment",
+      getBalance: "/balances/currencies/USD",
     };
 
     return {
