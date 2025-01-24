@@ -1,14 +1,8 @@
-import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { z } from "zod";
 import Paymanai from "paymanai";
-import { anthropic } from "@ai-sdk/anthropic";
-
-// Initialize Payman client
-const client = new Paymanai({
-  xPaymanAPISecret: process.env.PAYMAN_API_SECRET,
-  environment: "sandbox",
-});
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -19,16 +13,41 @@ export const runtime = "edge";
 export async function POST(req: Request) {
   try {
     const { messages, provider } = await req.json();
+    const apiKey = req.headers.get("authorization")?.replace("Bearer ", "");
+    const paymanApiKey = req.headers.get("x-payman-api-key");
+    const environment = req.headers.get("x-payman-environment") || "sandbox";
+
+    console.log("API Key:", apiKey);
+    console.log("Payman API Key:", paymanApiKey);
+    console.log("Environment:", environment);
+
+    if (!apiKey) {
+      return new Response("Missing API key", { status: 401 });
+    }
+
+    // Initialize Payman client with the API key from headers
+    const client = new Paymanai({
+      xPaymanAPISecret: paymanApiKey || process.env.PAYMAN_API_SECRET,
+      environment: environment as "sandbox" | "production",
+    });
+
+    const openaiClient = createOpenAI({
+      apiKey,
+      compatibility: "strict",
+    });
+
+    const anthropicClient = createAnthropic({
+      apiKey,
+    });
 
     const result = streamText({
       model:
         provider === "openai"
-          ? openai("gpt-4-turbo")
-          : anthropic("claude-3-haiku-20240307"),
+          ? openaiClient("gpt-4-turbo")
+          : anthropicClient("claude-3-haiku-20240307"),
       system:
         "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. Use the available tools to interact with the payment system when needed.",
       messages,
-
       tools: {
         // Server-side payment tools
         initiatePayment: {
@@ -89,9 +108,10 @@ export async function POST(req: Request) {
                 memo: description,
               });
               return `Payment of ${amount} ${currency} successfully processed for ${description}`;
-            } catch (error) {
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            } catch (error: any) {
               console.error("Payment processing error:", error);
-              throw new Error("Failed to process payment. Please try again.");
+              return `Error: Failed to process payment - ${error.message}`;
             }
           },
         },
@@ -106,9 +126,10 @@ export async function POST(req: Request) {
                 currency
               );
               return `Available balance: ${balance} ${currency}`;
-            } catch (error) {
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            } catch (error: any) {
               console.error("Balance check error:", error);
-              throw new Error("Failed to retrieve balance. Please try again.");
+              return `Error: Failed to retrieve balance - ${error.message}`;
             }
           },
         },
@@ -146,11 +167,10 @@ export async function POST(req: Request) {
                 type,
               });
               return `Found destinations: ${JSON.stringify(destinations)}`;
-            } catch (error) {
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            } catch (error: any) {
               console.error("Destination search error:", error);
-              throw new Error(
-                "Failed to search destinations. Please try again."
-              );
+              return `Error: Failed to search destinations - ${error.message}`;
             }
           },
         },
@@ -196,9 +216,10 @@ export async function POST(req: Request) {
                 tags: ["api_created"],
               });
               return `Successfully created payee: ${payee.name}`;
-            } catch (error) {
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            } catch (error: any) {
               console.error("Payee creation error:", error);
-              throw new Error("Failed to create payee. Please try again.");
+              return `Error: Failed to create payee - ${error.message}`;
             }
           },
         },
@@ -227,9 +248,10 @@ export async function POST(req: Request) {
                 memo,
               });
               return `Deposit initiated. Checkout URL: ${response.checkoutUrl}`;
-            } catch (error) {
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            } catch (error: any) {
               console.error("Deposit initiation error:", error);
-              throw new Error("Failed to initiate deposit. Please try again.");
+              return `Error: Failed to initiate deposit - ${error.message}`;
             }
           },
         },

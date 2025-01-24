@@ -33,7 +33,6 @@ export function ConfigSection({
   }, [setApiKey, setProvider, setPaymanApiKey]);
 
   const handleSaveKey = () => {
-    console.log("Save Keys button clicked");
     const trimmedValue = apiKey.trim();
     const trimmedPaymanValue = paymanApiKey.trim();
 
@@ -65,7 +64,6 @@ export function ConfigSection({
   };
 
   const handleProviderChange = (newProvider: "openai" | "anthropic") => {
-    console.log("handleProviderChange called with:", newProvider);
     setProvider(newProvider);
     const savedKey = localStorage.getItem(`${newProvider}ApiKey`);
     if (savedKey) {
@@ -133,12 +131,10 @@ export function ConfigSection({
             AI Provider
           </label>
           <div className="flex space-x-2">
-            {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                console.log("OpenAI button clicked");
                 handleProviderChange("openai");
               }}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
@@ -149,12 +145,10 @@ export function ConfigSection({
             >
               OpenAI
             </button>
-            {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                console.log("Anthropic button clicked");
                 handleProviderChange("anthropic");
               }}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
@@ -181,7 +175,6 @@ export function ConfigSection({
             type="password"
             value={apiKey}
             onChange={(e) => {
-              console.log("API key changed");
               setApiKey(e.target.value);
             }}
             onKeyDown={(e) => {
@@ -215,7 +208,6 @@ export function ConfigSection({
             type="password"
             value={paymanApiKey}
             onChange={(e) => {
-              console.log("Payman API key changed");
               setPaymanApiKey(e.target.value);
             }}
             onKeyDown={(e) => {

@@ -62,7 +62,6 @@ export default function Home() {
 
   // Handle provider changes
   const handleProviderChange = (newProvider: "openai" | "anthropic") => {
-    console.log("Setting provider to:", newProvider);
     setProvider(newProvider);
     localStorage.setItem("aiProvider", newProvider);
 
@@ -86,6 +85,7 @@ export default function Home() {
     isLoading,
     error: chatError,
   } = useChat({
+    api: "/api/chat",
     maxSteps: 5, // Prevent retries
     body: {
       provider,
@@ -93,9 +93,9 @@ export default function Home() {
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "X-Payman-API-Key": paymanApiKey,
+      "X-Payman-Environment": isLiveMode ? "production" : "sandbox",
     },
     async onToolCall({ toolCall }) {
-      console.log("Tool call:", toolCall);
       try {
         // Tools that require user input
         if (
@@ -118,23 +118,15 @@ export default function Home() {
           return "Credit Card ending in 1234";
         }
 
-        return `Successfully called ${
-          toolCall.toolName
-        } with parameters: ${JSON.stringify(toolCall.args)}`;
-      } catch (error) {
-        console.error("Tool call error:", error);
-        return JSON.stringify({
-          error:
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred",
-          status: "error",
-        });
+        // If we get here, the tool call failed
+        throw new Error(`Unknown or unsupported tool: ${toolCall.toolName}`);
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      } catch (error: any) {
+        // Return error message to be processed by the AI
+        return `Error: Tool call failed - ${error.message}`;
       }
     },
     onResponse(response) {
-      console.log("Response status:", response.status, response.ok);
-
       if (!response.ok) {
         setError(
           "Failed to get response. Please check your API key and try again."
@@ -145,8 +137,6 @@ export default function Home() {
     },
     onFinish(message) {
       // Only append a message if there's actual content and it's not an error response
-      console.log("Finished message:", message);
-
       if (
         message.content &&
         message.content.trim() !== "" &&
@@ -156,18 +146,6 @@ export default function Home() {
       }
     },
     onError(error) {
-      console.error("Full error object:", error);
-      console.error("Error stack:", error.stack);
-      // Get any additional error properties
-      if (error instanceof Error) {
-        console.error("Error cause:", error.cause);
-        // Log any custom properties that might exist
-        console.error(
-          "Additional properties:",
-          Object.getOwnPropertyNames(error)
-        );
-      }
-
       const errorMessage =
         error instanceof Error
           ? `${error.message} (${error.cause || "no cause"})`
@@ -238,7 +216,6 @@ export default function Home() {
   };
 
   const formatToolCallResult = (result: string): React.ReactNode => {
-    console.log(result);
     try {
       // First try to parse the entire result as JSON
       const parsed = JSON.parse(result);
@@ -307,9 +284,7 @@ export default function Home() {
             </div>
           );
         }
-      } catch (e2) {
-        console.error("Failed to parse JSON within string:", e2);
-      }
+      } catch (e2) {}
       // Return as plain text if no JSON found
       return result;
     }

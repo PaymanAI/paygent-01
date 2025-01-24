@@ -23,14 +23,11 @@ export function ChatInterface({
   isLoading,
 }: ChatInterfaceProps) {
   const renderMessageContent = (message: Message) => {
-    console.log("Content:", message);
-
     if (!message.content) return null;
 
     // Try to parse as tool form
     try {
       const content = JSON.parse(message.content);
-      console.log("Content:", message);
       if (content.type === "TOOL_FORM" && content.toolName in ToolComponents) {
         const Component = ToolComponents[content.toolName];
         return (
@@ -46,14 +43,9 @@ export function ChatInterface({
                 if (!paymentData.currency) {
                   paymentData.currency = "USD";
                 }
-                // TODO: Call processPayment with the complete data
-                console.log("Processing payment with:", paymentData);
               }
             }}
-            onCancel={() => {
-              // TODO: Handle cancellation
-              console.log("Form cancelled");
-            }}
+            onCancel={() => {}}
           />
         );
       }
