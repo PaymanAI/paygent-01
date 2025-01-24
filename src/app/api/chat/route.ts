@@ -49,69 +49,55 @@ export async function POST(req: Request) {
         "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. Use the available tools to interact with the payment system when needed.",
       messages,
       tools: {
-        // Server-side payment tools
-        initiatePayment: {
-          description:
-            "Start the process of making a payment by collecting necessary information",
+        sendPayment: {
+          description: "Send a payment using Payman",
           parameters: z.object({
-            initialAmount: z
+            amountDecimal: z
               .number()
-              .optional()
-              .describe("Initial amount if known"),
-            recipientEmail: z
+              .describe("Amount in decimal format (e.g., 50.00)"),
+            paymentDestinationId: z
+              .string()
+              .describe("ID of the payment destination"),
+            customerId: z.string().optional().describe("Optional customer ID"),
+            customerEmail: z
               .string()
               .optional()
-              .describe("Recipient email if known"),
-            description: z
+              .describe("Optional customer email"),
+            customerName: z
               .string()
               .optional()
-              .describe("Payment description if known"),
-          }),
-          execute: async ({ initialAmount, recipientEmail, description }) => {
-            return JSON.stringify({
-              type: "TOOL_FORM",
-              toolName: "processPayment",
-              args: {
-                amount: initialAmount,
-                recipientEmail,
-                description,
-              },
-            });
-          },
-        },
-        processPayment: {
-          description: "Process a payment with complete information",
-          parameters: z.object({
-            amount: z.number().describe("The amount to pay"),
-            currency: z.string().describe("The currency code (e.g., USD)"),
-            description: z.string().describe("Description of the payment"),
-            recipientEmail: z
-              .string()
-              .describe("Email of the payment recipient"),
-            recipientName: z
+              .describe("Optional customer name"),
+            memo: z
               .string()
               .optional()
-              .describe("Name of the payment recipient"),
+              .describe("Optional payment memo/description"),
           }),
           execute: async ({
-            amount,
-            currency,
-            description,
-            recipientEmail,
-            recipientName,
+            amountDecimal,
+            paymentDestinationId,
+            customerId,
+            customerEmail,
+            customerName,
+            memo,
           }) => {
+            if (!client) {
+              throw new Error("Payman client not initialized");
+            }
+
             try {
-              const response = await client.payments.sendPayment({
-                amountDecimal: amount,
-                customerEmail: recipientEmail,
-                customerName: recipientName,
-                memo: description,
+              const payment = await client.payments.sendPayment({
+                amountDecimal,
+                paymentDestinationId,
+                customerId,
+                customerEmail,
+                customerName,
+                memo,
               });
-              return `Payment of ${amount} ${currency} successfully processed for ${description}`;
+
+              return `Payment sent successfully! Payment ID: ${payment}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
-              console.error("Payment processing error:", error);
-              return `Error: Failed to process payment - ${error.message}`;
+              throw new Error(`Failed to send payment: ${error.message}`);
             }
           },
         },
@@ -131,22 +117,6 @@ export async function POST(req: Request) {
               console.error("Balance check error:", error);
               return `Error: Failed to retrieve balance - ${error.message}`;
             }
-          },
-        },
-        getPaymentHistory: {
-          description: "Get the payment history for the user",
-          parameters: z.object({
-            limit: z
-              .number()
-              .optional()
-              .describe("Number of transactions to return"),
-            status: z.enum(["pending", "completed", "failed"]).optional(),
-          }),
-          execute: async ({ limit = 5, status }) => {
-            // TODO: Implement actual history fetch with PaymanAI
-            return `Last ${limit} payments retrieved${
-              status ? ` with status ${status}` : ""
-            }`;
           },
         },
         searchDestinations: {
@@ -254,19 +224,6 @@ export async function POST(req: Request) {
               return `Error: Failed to initiate deposit - ${error.message}`;
             }
           },
-        },
-        // Client-side tools
-        confirmPayment: {
-          description: "Ask the user to confirm a payment before processing",
-          parameters: z.object({
-            amount: z.number(),
-            currency: z.string(),
-            description: z.string(),
-          }),
-        },
-        getPaymentMethod: {
-          description: "Get the user's preferred payment method",
-          parameters: z.object({}),
         },
       },
     });
