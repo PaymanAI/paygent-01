@@ -33,6 +33,10 @@ export interface CollapsibleArrayItemProps {
 export interface ConfigSectionProps {
   apiKey: string;
   setApiKey: (key: string) => void;
+  provider: "openai" | "anthropic";
+  setProvider: (provider: "openai" | "anthropic") => void;
+  paymanApiKey: string;
+  setPaymanApiKey: (key: string) => void;
 }
 
 export interface QuickActionsProps {
