@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     // Initialize Payman client with the API key from headers
     const client = new Paymanai({
       xPaymanAPISecret: paymanApiKey || process.env.PAYMAN_API_SECRET,
-      environment: environment as "sandbox" | "production",
+      baseURL: "https://agent-sandbox.payman.dev/api",
+      // environment: environment as "sandbox" | "production",
     });
 
     const openaiClient = createOpenAI({
@@ -185,7 +186,8 @@ export async function POST(req: Request) {
                 },
                 tags: ["api_created"],
               });
-              return `Successfully created payee: ${payee.name}`;
+              const payeeId = JSON.parse(`${payee}`).id;
+              return `Successfully created payee: ${payeeId}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
               console.error("Payee creation error:", error);
@@ -217,7 +219,10 @@ export async function POST(req: Request) {
                 customerName,
                 memo,
               });
-              return `Deposit initiated. Checkout URL: ${response.checkoutUrl}`;
+
+              const checkoutUrl = JSON.parse(`${response}`).checkoutUrl;
+
+              return `Deposit initiated. Checkout URL: ${checkoutUrl}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
               console.error("Deposit initiation error:", error);
