@@ -4,6 +4,7 @@ import type { Message } from "ai/react";
 import type { ChatInterfaceProps } from "./types";
 import { PaymentForm } from "./tools/PaymentForm";
 import { PayeeForm } from "./tools/PayeeForm";
+import { useRef, useState } from "react";
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const ToolComponents: Record<string, React.ComponentType<any>> = {
@@ -22,6 +23,21 @@ export function ChatInterface({
   error,
   isLoading,
 }: ChatInterfaceProps) {
+  const [files, setFiles] = useState<FileList | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    handleSubmit(e, {
+      experimental_attachments: files,
+    });
+
+    // Reset files after submission
+    setFiles(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const renderMessageContent = (message: Message) => {
     if (!message.content) return null;
 
@@ -34,12 +50,9 @@ export function ChatInterface({
           <Component
             toolCallId={content.toolCallId}
             args={content.args}
-            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             onComplete={(result: any) => {
-              // When form is completed, call processPayment with the collected data
               if (content.toolName === "processPayment") {
                 const paymentData = JSON.parse(result);
-                // Add default currency if not specified
                 if (!paymentData.currency) {
                   paymentData.currency = "USD";
                 }
@@ -51,11 +64,31 @@ export function ChatInterface({
       }
     } catch {
       // Not a tool form, render as markdown
-      return message.role === "user" ? (
-        <div className="whitespace-pre-wrap text-[15px]">{message.content}</div>
-      ) : (
-        <div className="prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-white/80 prose-pre:text-sm">
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+      return (
+        <div>
+          {message.role === "user" ? (
+            <div className="whitespace-pre-wrap text-[15px]">{message.content}</div>
+          ) : (
+            <div className="prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-white/80 prose-pre:text-sm">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          )}
+          
+          {/* Render attachments if present */}
+          {message.experimental_attachments?.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {message.experimental_attachments
+                .filter(attachment => attachment.contentType.startsWith('image/'))
+                .map((attachment, index) => (
+                  <img
+                    key={`${message.id}-${index}`}
+                    src={attachment.url}
+                    alt={attachment.name}
+                    className="max-w-[200px] rounded-lg shadow-sm"
+                  />
+                ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -130,21 +163,52 @@ export function ChatInterface({
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="p-4 flex space-x-3">
-          <input
-            className="flex-1 px-4 py-3 border border-payman-neutral/50 rounded-2xl bg-payman-neutral/5 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary/50 transition-all placeholder:text-gray-400"
-            value={input}
-            placeholder="Type your message... (try /who, /add, or /send)"
-            onChange={handleInputChange}
-            onKeyDown={handleInputKeyDown}
-          />
-          <button
-            type="submit"
-            className="px-6 py-3 bg-payman-primary text-white rounded-2xl hover:bg-payman-primary/90 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!input.trim() || isLoading}
-          >
-            {isLoading ? "Sending..." : "Send"}
-          </button>
+        <form onSubmit={handleFormSubmit} className="p-4 space-y-3">
+          <div className="flex space-x-3">
+            <input
+              className="flex-1 px-4 py-3 border border-payman-neutral/50 rounded-2xl bg-payman-neutral/5 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary/50 transition-all placeholder:text-gray-400"
+              value={input}
+              placeholder="Type your message... (try /who, /add, or /send)"
+              onChange={handleInputChange}
+              onKeyDown={handleInputKeyDown}
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-payman-primary text-white rounded-2xl hover:bg-payman-primary/90 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!input.trim() && !files?.length || isLoading}
+            >
+              {isLoading ? "Sending..." : "Send"}
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="file"
+              onChange={event => {
+                if (event.target.files) {
+                  setFiles(event.target.files);
+                }
+              }}
+              ref={fileInputRef}
+              multiple
+              accept="image/*,application/pdf"
+              className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-payman-primary/10 file:text-payman-primary hover:file:bg-payman-primary/20 cursor-pointer"
+            />
+            {files?.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFiles(undefined);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                Clear files
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
