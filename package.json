@@ -2,9 +2,6 @@
   "name": "create-paygent",
   "version": "0.1.0",
   "private": false,
-  "bin": {
-    "create-paygent": "./bin/cli.js"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
