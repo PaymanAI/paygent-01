@@ -47,7 +47,10 @@ export interface ChatInterfaceProps {
   messages: Message[];
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  handleSubmit: (
+    e: React.FormEvent,
+    options?: { experimental_attachments?: FileList }
+  ) => void;
   handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   error: string | null;

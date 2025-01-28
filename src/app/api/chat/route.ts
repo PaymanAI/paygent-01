@@ -12,7 +12,7 @@ export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const { messages, provider } = await req.json();
+    const { messages, provider, experimental_attachments } = await req.json();
     const apiKey = req.headers.get("authorization")?.replace("Bearer ", "");
     const paymanApiKey = req.headers.get("x-payman-api-key");
     const environment = req.headers.get("x-payman-environment") || "sandbox";
@@ -28,8 +28,7 @@ export async function POST(req: Request) {
     // Initialize Payman client with the API key from headers
     const client = new Paymanai({
       xPaymanAPISecret: paymanApiKey || process.env.PAYMAN_API_SECRET,
-      baseURL: "https://agent-sandbox.payman.dev/api",
-      // environment: environment as "sandbox" | "production",
+      environment: environment as "sandbox" | "production",
     });
 
     const openaiClient = createOpenAI({
@@ -47,8 +46,9 @@ export async function POST(req: Request) {
           ? openaiClient("gpt-4-turbo")
           : anthropicClient("claude-3-5-sonnet-20241022"),
       system:
-        "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. Use the available tools to interact with the payment system when needed.",
+        "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. You can also analyze images and documents they share. Use the available tools to interact with the payment system when needed.",
       messages,
+      experimental_attachments,
       tools: {
         sendPayment: {
           description: "Send a payment using Payman",
@@ -154,10 +154,10 @@ export async function POST(req: Request) {
             accountType: z
               .enum(["checking", "savings"])
               .describe("Account type"),
-            email: z.string().describe("Contact email"),
-            phoneNumber: z.string().describe("Contact phone number"),
-            address: z.string().describe("Physical address"),
-            taxId: z.string().describe("Tax ID (SSN/EIN)"),
+            email: z.string().optional().describe("Contact email"),
+            phoneNumber: z.string().optional().describe("Contact phone number"),
+            address: z.string().optional().describe("Physical address"),
+            taxId: z.string().optional().describe("Tax ID (SSN/EIN)"),
           }),
           execute: async ({
             name,
