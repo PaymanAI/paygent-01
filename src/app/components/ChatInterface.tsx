@@ -67,9 +67,9 @@ export function ChatInterface({
       return (
         <div>
           {message.role === "user" ? (
-            <div className="whitespace-pre-wrap text-[15px]">{message.content}</div>
+            <div className="whitespace-pre-wrap text-[15px] text-white">{message.content}</div>
           ) : (
-            <div className="prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-white/80 prose-pre:text-sm">
+            <div className="prose !text-gray-900 max-w-none prose-p:leading-relaxed prose-pre:bg-white/80 prose-pre:text-sm prose-p:!text-gray-900 prose-headings:!text-gray-900 prose-li:!text-gray-900">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}
@@ -166,7 +166,7 @@ export function ChatInterface({
         <form onSubmit={handleFormSubmit} className="p-4 space-y-3">
           <div className="flex space-x-3">
             <input
-              className="flex-1 px-4 py-3 border border-payman-neutral/50 rounded-2xl bg-payman-neutral/5 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary/50 transition-all placeholder:text-gray-400"
+              className="flex-1 px-4 py-3 border border-payman-neutral/50 rounded-2xl bg-payman-neutral/5 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary/50 transition-all placeholder:text-gray-400 text-gray-900"
               value={input}
               placeholder="Type your message... (try /who, /add, or /send)"
               onChange={handleInputChange}

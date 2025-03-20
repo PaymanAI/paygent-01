@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     // Initialize Payman client with the API key from headers
     const client = new Paymanai({
       xPaymanAPISecret: paymanApiKey || process.env.PAYMAN_API_SECRET,
-      environment: environment as "sandbox" | "production",
     });
 
     const openaiClient = createOpenAI({
@@ -48,7 +47,7 @@ export async function POST(req: Request) {
       system:
         "You are a helpful payment assistant. Help users understand and manage their payments, transactions, and financial queries. You can also analyze images and documents they share. Use the available tools to interact with the payment system when needed.",
       messages,
-      experimental_attachments,
+      ...(experimental_attachments && { experimental_attachments }),
       tools: {
         sendPayment: {
           description: "Send a payment using Payman",
@@ -56,18 +55,9 @@ export async function POST(req: Request) {
             amountDecimal: z
               .number()
               .describe("Amount in decimal format (e.g., 50.00)"),
-            paymentDestinationId: z
+            payeeId: z
               .string()
               .describe("ID of the payment destination"),
-            customerId: z.string().optional().describe("Optional customer ID"),
-            customerEmail: z
-              .string()
-              .optional()
-              .describe("Optional customer email"),
-            customerName: z
-              .string()
-              .optional()
-              .describe("Optional customer name"),
             memo: z
               .string()
               .optional()
@@ -75,30 +65,59 @@ export async function POST(req: Request) {
           }),
           execute: async ({
             amountDecimal,
-            paymentDestinationId,
-            customerId,
-            customerEmail,
-            customerName,
+            payeeId,
             memo,
           }) => {
-            if (!client) {
-              throw new Error("Payman client not initialized");
-            }
-
             try {
-              const payment = await client.payments.sendPayment({
+              console.log("Sending payment with parameters:", {
                 amountDecimal,
-                paymentDestinationId,
-                customerId,
-                customerEmail,
-                customerName,
-                memo,
+                payeeId,
+                memo
               });
-
-              return `Payment sent successfully! Payment ID: ${payment}`;
+              
+              // Create request payload
+              const requestBody = {
+                amountDecimal,
+                payeeId,
+                memo,
+              };
+              
+              console.log("Payment request body:", JSON.stringify(requestBody, null, 2));
+              
+              // Set up API call options
+              const apiUrl = `https://agent.${environment === "production" ? "" : "sandbox."}payman.ai/api/payments/send-payment`;
+              const options = {
+                method: 'POST',
+                headers: {
+                  'x-payman-api-secret': paymanApiKey || process.env.PAYMAN_API_SECRET || "",
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/vnd.payman.v1+json'
+                },
+                body: JSON.stringify(requestBody)
+              };
+              
+              console.log("Making API call to:", apiUrl);
+              
+              // Make the API call
+              const response = await fetch(apiUrl, options);
+              const responseData = await response.json();
+              
+              console.log("Payment API response status:", response.status);
+              console.log("Payment API response:", responseData);
+              
+              // Check for success response
+              if (!response.ok) {
+                throw new Error(`API responded with status ${response.status}: ${JSON.stringify(responseData)}`);
+              }
+              
+              return `Payment sent successfully! Payment ID: ${responseData.reference}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
-              throw new Error(`Failed to send payment: ${error.message}`);
+              console.error("Payment error:", error);
+              
+              // Try to provide a more helpful error message
+              const errorMessage = error.message || "Unknown error";
+              return `Error: Failed to send payment - ${errorMessage}`;
             }
           },
         },
@@ -109,124 +128,260 @@ export async function POST(req: Request) {
           }),
           execute: async ({ currency }) => {
             try {
-              const balance = await client.balances.getSpendableBalance(
-                currency
-              );
-              return `Available balance: ${balance} ${currency}`;
+              console.log("Getting balance for currency:", currency);
+              
+              // Set up API call options
+              const apiUrl = `https://agent.${environment === "production" ? "" : "sandbox."}payman.ai/api/balances/currencies/${currency}`;
+              const options = {
+                method: 'GET',
+                headers: {
+                  'x-payman-api-secret': paymanApiKey || process.env.PAYMAN_API_SECRET || "",
+                  'Accept': 'application/vnd.payman.v1+json',
+                  'Content-Type': 'application/json'
+                }
+              };
+              
+              console.log("Making API call to:", apiUrl);
+              
+              // Make the API call
+              const response = await fetch(apiUrl, options);
+              const responseData = await response.json();
+              
+              console.log("Balance API response status:", response.status);
+              console.log("Balance API response:", responseData);
+              
+              // Check for success response
+              if (!response.ok) {
+                throw new Error(`API responded with status ${response.status}: ${JSON.stringify(responseData)}`);
+              }
+              
+              // Extract the spendable balance from the response
+              const spendableBalance = responseData;
+              
+              return `Available balance: ${spendableBalance} ${currency}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
               console.error("Balance check error:", error);
-              return `Error: Failed to retrieve balance - ${error.message}`;
+              
+              // Try to provide a more helpful error message
+              const errorMessage = error.message || "Unknown error";
+              return `Error: Failed to retrieve balance - ${errorMessage}`;
             }
           },
         },
-        searchDestinations: {
+        searchPayees: {
           description: "Search for payment destinations",
           parameters: z.object({
             name: z
               .string()
               .optional()
-              .describe("Name to filter by (partial match)"),
-            contactEmail: z.string().optional().describe("Email to filter by"),
-            type: z.string().optional().describe("Payment type (e.g., US_ACH)"),
+              .describe("The name of the payee to search for. This can be a partial, case-insensitive match."),
+            contactEmail: z.string().optional().describe("The contact email to search for."),
+            contactPhoneNumber: z.string().optional().describe("The contact phone number to search for."),
+            contactTaxId: z.string().optional().describe("The contact tax id to search for."),
           }),
-          execute: async ({ name, contactEmail, type }) => {
+          execute: async ({ name, contactEmail, contactPhoneNumber, contactTaxId }) => {
             try {
-              const destinations = await client.payments.searchDestinations({
-                name,
-                contactEmail,
-                type,
+              console.log("Searching payees with parameters:", { 
+                name, 
+                contactEmail, 
+                contactPhoneNumber, 
+                contactTaxId 
               });
-              return `Found destinations: ${JSON.stringify(destinations)}`;
+              
+              // Build query parameters if any are provided
+              const queryParams = new URLSearchParams();
+              if (name) queryParams.append('name', name);
+              if (contactEmail) queryParams.append('contactEmail', contactEmail);
+              if (contactPhoneNumber) queryParams.append('contactPhoneNumber', contactPhoneNumber);
+              if (contactTaxId) queryParams.append('contactTaxId', contactTaxId);
+              
+              const queryString = queryParams.toString();
+              const apiUrl = `https://agent.${environment === "production" ? "" : "sandbox."}payman.ai/api/payments/search-payees${queryString ? `?${queryString}` : ''}`;
+              
+              console.log("Making API call to:", apiUrl);
+              
+              // Set up API call options - simplified to match the example
+              const options = {
+                method: 'GET',
+                headers: {
+                  'x-payman-api-secret': paymanApiKey || process.env.PAYMAN_API_SECRET || "",
+                  'Accept': 'application/vnd.payman.v1+json',
+                  'Content-Type': 'application/json'
+                }
+              };
+              
+              // Make the API call
+              const response = await fetch(apiUrl, options);
+              const responseData = await response.json();
+              
+              console.log("Search API response status:", response.status);
+              console.log("Search API response:", responseData);
+              
+              // Check for success response
+              if (!response.ok) {
+                throw new Error(`API responded with status ${response.status}: ${JSON.stringify(responseData)}`);
+              }
+              
+              return `Found payees: ${JSON.stringify(responseData)}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
-              console.error("Destination search error:", error);
-              return `Error: Failed to search destinations - ${error.message}`;
+              console.error("Payee search error:", error);
+              
+              // Try to provide a more helpful error message
+              const errorMessage = error.message || "Unknown error";
+              return `Error: Failed to search payees - ${errorMessage}`;
             }
           },
         },
         createPayee: {
-          description: "Create a new ACH payee",
+          description: "Create a new payee",
           parameters: z.object({
-            name: z.string().describe("Full name of the payee"),
-            accountNumber: z.string().describe("Bank account number"),
-            routingNumber: z.string().describe("Bank routing number"),
+            type: z
+              .enum(["US_ACH", "CRYPTO_ADDRESS"])
+              .describe("Type of payee (bank account or crypto address)"),
+            name: z.string().describe("Name of the payee"),
+            // Parameters for US_ACH type
+            accountNumber: z.string().optional().describe("Bank account number (for US_ACH)"),
+            routingNumber: z.string().optional().describe("Bank routing number (for US_ACH)"),
             accountType: z
               .enum(["checking", "savings"])
-              .describe("Account type"),
+              .optional()
+              .describe("Account type (for US_ACH)"),
+            // Parameters for CRYPTO_ADDRESS type
+            address: z.string().optional().describe("Crypto wallet address (for CRYPTO_ADDRESS)"),
+            chain: z.string().optional().describe("Blockchain network (for CRYPTO_ADDRESS)"),
+            currency: z.string().optional().describe("Cryptocurrency code (for CRYPTO_ADDRESS)"),
+            // Contact details
             email: z.string().optional().describe("Contact email"),
             phoneNumber: z.string().optional().describe("Contact phone number"),
-            address: z.string().optional().describe("Physical address"),
             taxId: z.string().optional().describe("Tax ID (SSN/EIN)"),
+            // Address details
+            addressLine1: z.string().optional().describe("Address line 1"),
+            addressLine2: z.string().optional().describe("Address line 2"),
+            locality: z.string().optional().describe("City/locality"),
+            region: z.string().optional().describe("State/region"),
+            postcode: z.string().optional().describe("ZIP/postal code"),
+            country: z.string().optional().describe("Country code"),
+            // Tags
+            tags: z.array(z.string()).optional().describe("Tags for categorizing the payee"),
           }),
           execute: async ({
+            type,
             name,
             accountNumber,
             routingNumber,
             accountType,
+            address,
+            chain,
+            currency,
             email,
             phoneNumber,
-            address,
             taxId,
+            addressLine1,
+            addressLine2,
+            locality,
+            region,
+            postcode,
+            country,
+            tags,
           }) => {
             try {
-              const payee = await client.payments.createPayee({
-                type: "US_ACH",
+              console.log("Creating payee with parameters:", {
+                type,
                 name,
-                accountHolderName: name,
-                accountNumber,
-                routingNumber,
-                accountType,
+                ...(type === "US_ACH" ? { accountNumber, routingNumber, accountType } : {}),
+                ...(type === "CRYPTO_ADDRESS" ? { address, chain, currency } : {}),
+                email,
+                phoneNumber,
+                taxId,
+                addressDetails: {
+                  addressLine1,
+                  addressLine2,
+                  locality,
+                  region,
+                  postcode,
+                  country,
+                },
+                tags,
+              });
+              
+              // Prepare request body based on payee type
+              let requestBody: any = {
+                type,
+                name,
+                tags: tags || [],
                 contactDetails: {
-                  contactType: "individual",
                   email,
                   phoneNumber,
-                  address,
                   taxId,
+                  address: (addressLine1 || addressLine2 || locality || region || postcode || country) ? {
+                    addressLine1,
+                    addressLine2,
+                    locality,
+                    region,
+                    postcode,
+                    country,
+                  } : undefined,
                 },
-                tags: ["api_created"],
-              });
-              const payeeId = JSON.parse(`${payee}`).id;
-              return `Successfully created payee: ${payeeId}`;
+              };
+              
+              // Add type-specific fields
+              if (type === "US_ACH") {
+                requestBody = {
+                  ...requestBody,
+                  accountHolderName: name,
+                  accountNumber,
+                  routingNumber,
+                  accountType,
+                };
+              } else if (type === "CRYPTO_ADDRESS") {
+                requestBody = {
+                  ...requestBody,
+                  address,
+                  chain,
+                  currency,
+                };
+              }
+              
+              // Clean up undefined values
+              requestBody = JSON.parse(JSON.stringify(requestBody));
+              
+              console.log("Create payee request body:", JSON.stringify(requestBody, null, 2));
+              
+              // Set up API call options
+              const apiUrl = `https://agent.${environment === "production" ? "" : "sandbox."}payman.ai/api/payments/payees`;
+              const options = {
+                method: 'POST',
+                headers: {
+                  'x-payman-api-secret': paymanApiKey || process.env.PAYMAN_API_SECRET || "",
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+              };
+              
+              console.log("Making API call to:", apiUrl);
+              
+              // Make the API call
+              const response = await fetch(apiUrl, options);
+              const responseData = await response.json();
+              
+              console.log("Create payee API response status:", response.status);
+              console.log("Create payee API response:", responseData);
+              
+              // Check for success response
+              if (!response.ok) {
+                throw new Error(`API responded with status ${response.status}: ${JSON.stringify(responseData)}`);
+              }
+              
+              return `Successfully created payee: ${responseData.id}`;
               // biome-ignore lint/suspicious/noExplicitAny: <explanation>
             } catch (error: any) {
               console.error("Payee creation error:", error);
-              return `Error: Failed to create payee - ${error.message}`;
-            }
-          },
-        },
-        initiateDeposit: {
-          description: "Request money from someone",
-          parameters: z.object({
-            amount: z.number().describe("Amount to deposit"),
-            customerId: z.string().describe("Customer ID"),
-            customerEmail: z.string().optional().describe("Customer email"),
-            customerName: z.string().optional().describe("Customer name"),
-            memo: z.string().optional().describe("Deposit memo"),
-          }),
-          execute: async ({
-            amount,
-            customerId,
-            customerEmail,
-            customerName,
-            memo,
-          }) => {
-            try {
-              const response = await client.payments.initiateCustomerDeposit({
-                amountDecimal: amount,
-                customerId,
-                customerEmail,
-                customerName,
-                memo,
-              });
-
-              const checkoutUrl = JSON.parse(`${response}`).checkoutUrl;
-
-              return `Deposit initiated. Checkout URL: ${checkoutUrl}`;
-              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-            } catch (error: any) {
-              console.error("Deposit initiation error:", error);
-              return `Error: Failed to initiate deposit - ${error.message}`;
+              
+              // Try to provide a more helpful error message
+              const errorMessage = error.message || "Unknown error";
+              return `Error: Failed to create payee - ${errorMessage}`;
             }
           },
         },

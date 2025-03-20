@@ -333,7 +333,7 @@ export default function Home() {
           <div className="bg-white border-b border-payman-neutral/30">
             <div className="py-2">
               <div className="text-center flex mr-6">
-                <h1 className="text-5xl font-bold text-charcoal-700 tracking-tight flex-1">
+                <h1 className="text-5xl font-bold text-gray-900 tracking-tight flex-1">
                   PAYGENT
                   <span className="text-payman-primary relative">
                     .
@@ -463,7 +463,7 @@ export default function Home() {
                   onClick={confirmLiveMode}
                   className="w-full px-6 py-4 bg-payman-primary text-white rounded-xl hover:bg-payman-primary/90 transition-all duration-300 font-medium shadow-lg shadow-payman-primary/20"
                 >
-                  Let’s Ruin My Accountant’s Life! 🚀
+                  Let's Ruin My Accountant's Life! 🚀
                 </button>
                 {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
                 <button
