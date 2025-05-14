@@ -1,10 +1,10 @@
 export const API_CONFIG = {
-	host: "http://localhost:8100/api",
+	host: "https://agent.payman.dev/api",
 } as const;
 
 export const AUTH_CONFIG = {
-	clientId: "pm-test-2xi-kmgTa875Qj4qbP_REKM0",
+	clientId: "pm-test-uRS7il77lAQftrXicg1CJoRF",
 	clientSecret:
-		"ymtpcv3ffoXuY-735D6qGR05EuHml-u1183tSqQzJ7CjoK6LdSdbAJuZ41YZwlR6",
+		"vOBvp3woD1_5c_xpMolwX_ID9tgYXfpOadMB0-AdLE1vMQ-pZYXmPFm-Sj0RP-5Y",
 	tokenEndpoint: `${API_CONFIG.host}/oauth2/token`,
 } as const;

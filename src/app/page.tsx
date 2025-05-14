@@ -16,7 +16,8 @@ export default function Home() {
 	const [input, setInput] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const messagesEndRef = useRef<HTMLDivElement>(null!);
+	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const [sessionId] = useState(() => Math.random().toString(36).substring(2));
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setInput(e.target.value);
@@ -30,7 +31,7 @@ export default function Home() {
 		try {
 			// Add user message to the chat
 			const userMessage: Message = {
-				id: crypto.randomUUID(),
+				id: `msg_${Date.now()}_${Math.random().toString(36).substring(2)}`,
 				role: "user",
 				content: input,
 			};
@@ -43,11 +44,10 @@ export default function Home() {
 				throw new Error("No access token found");
 			}
 
-			const requestId = crypto.randomUUID();
-			const taskId = crypto.randomUUID();
-			const sessionId = crypto.randomUUID();
+			const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+			const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2)}`;
 
-			const response = await fetch(`${API_CONFIG.host}/api/a2a/tasks/send`, {
+			const response = await fetch(`${API_CONFIG.host}/a2a/tasks/send`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -87,7 +87,7 @@ export default function Home() {
 					console.log("responseText", responseText);
 					// Add the assistant's response to messages
 					const newMessage: Message = {
-						id: crypto.randomUUID(),
+						id: `msg_${Date.now()}_${Math.random().toString(36).substring(2)}`,
 						role: "assistant",
 						content: responseText,
 					};

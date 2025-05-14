@@ -31,12 +31,16 @@ export function ChatInterface({
 	error,
 	isLoading,
 }: ChatInterfaceProps) {
-	const [sessionId, setSessionId] = useState<string>(crypto.randomUUID());
+	const [sessionId, setSessionId] = useState(
+		() => `session_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+	);
 	const [waitingForResponse, setWaitingForResponse] = useState(false);
 
 	useEffect(() => {
 		const handleNewSession = () => {
-			setSessionId(crypto.randomUUID());
+			setSessionId(
+				`session_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+			);
 			// Clear messages by triggering a form submission with empty input
 			handleSubmit(new Event("submit") as unknown as React.FormEvent);
 		};

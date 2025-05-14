@@ -2,14 +2,15 @@ import React, { useState, useEffect } from "react";
 import Script from "next/script";
 
 export function ConfigSection() {
-	const [isConnected, setIsConnected] = useState(() => {
+	const [isConnected, setIsConnected] = useState(false);
+
+	useEffect(() => {
 		const accessToken = localStorage.getItem("access_token");
 		console.log("Initial access token check:", accessToken);
-		return !!accessToken;
-	});
+		setIsConnected(!!accessToken);
+	}, []);
 
 	const startNewSession = () => {
-		// Dispatch a custom event that ChatInterface can listen to
 		window.dispatchEvent(new CustomEvent("startNewSession"));
 	};
 
@@ -48,24 +49,17 @@ export function ConfigSection() {
 						console.log("OAuth Listener: Token exchange successful:", data);
 						console.log("OAuth Listener: Access token:", data.accessToken);
 
-						// Save token to localStorage
 						localStorage.setItem("access_token", data.accessToken);
 						console.log("OAuth Listener: Token saved to localStorage");
 
-						// Update connected state
 						setIsConnected(true);
 
-						// Wait a moment to ensure localStorage is updated
 						await new Promise((resolve) => setTimeout(resolve, 100));
 
-						// Verify token was saved
 						const savedToken = localStorage.getItem("access_token");
 						console.log("OAuth Listener: Verified saved token:", savedToken);
 
-						// Log the current URL for debugging
 						console.log("OAuth Listener: Current URL:", window.location.href);
-
-						// Instead of redirecting, just log what would have happened
 						console.log("OAuth Listener: Would redirect to:", url.toString());
 					} catch (error) {
 						console.error("OAuth Listener: Error:", error);
@@ -119,41 +113,40 @@ export function ConfigSection() {
 				</div>
 
 				{/* Buttons Section */}
-				{isConnected ? (
-					<div className="flex justify-end space-x-3">
-						<button
-							type="button"
-							onClick={startNewSession}
-							className="px-4 py-2 bg-payman-neutral text-payman-dark rounded-xl hover:bg-payman-neutral/80 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 transition-all font-medium shadow-sm"
-						>
-							New Session
-						</button>
-						<button
-							type="button"
-							className="px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all font-medium shadow-sm"
-							disabled
-						>
-							Connected
-						</button>
-					</div>
-				) : (
-					<>
-						<div
-							className="flex justify-end space-x-3"
-							id="payman-btn-target"
-						/>
-						<Script
-							src="/pm-dev.js"
-							data-client-id="pm-test-2xi-kmgTa875Qj4qbP_REKM0"
-							data-client-secret="ymtpcv3ffoXuY-735D6qGR05EuHml-u1183tSqQzJ7CjoK6LdSdbAJuZ41YZwlR6"
-							data-redirect-uri="http://localhost:3000"
-							data-scopes="read:balance"
-							data-target="#payman-btn-target"
-							data-dark-mode="false"
-							strategy="afterInteractive"
-						/>
-					</>
-				)}
+				<div className="flex justify-end space-x-3">
+					{isConnected ? (
+						<>
+							<button
+								type="button"
+								onClick={startNewSession}
+								className="px-4 py-2 bg-payman-neutral text-payman-dark rounded-xl hover:bg-payman-neutral/80 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 transition-all font-medium shadow-sm"
+							>
+								New Session
+							</button>
+							<button
+								type="button"
+								className="px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all font-medium shadow-sm"
+								disabled
+							>
+								Connected
+							</button>
+						</>
+					) : null}
+					<div
+						className="flex justify-end w-full"
+						id="payman-btn-target"
+						style={{ display: isConnected ? "none" : "flex" }}
+					/>
+					<Script
+						src="/pm-dev.js"
+						data-client-id="pm-test-uRS7il77lAQftrXicg1CJoRF"
+						data-redirect-uri="http://localhost:3000"
+						data-scopes="read:balance"
+						data-target="#payman-btn-target"
+						data-dark-mode="false"
+						strategy="afterInteractive"
+					/>
+				</div>
 			</div>
 		</div>
 	);
