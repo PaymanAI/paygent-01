@@ -1,243 +1,160 @@
 import React, { useState, useEffect } from "react";
-import type { ConfigSectionProps } from "./types";
-import { toast } from "react-hot-toast";
+import Script from "next/script";
 
-export function ConfigSection({
-  apiKey,
-  setApiKey,
-  provider,
-  setProvider,
-  paymanApiKey,
-  setPaymanApiKey,
-}: ConfigSectionProps) {
-  const [isKeySaved, setIsKeySaved] = useState(false);
-  const [isPaymanKeySaved, setIsPaymanKeySaved] = useState(false);
-  const [error, setError] = useState("");
+export function ConfigSection() {
+	const [isConnected, setIsConnected] = useState(() => {
+		const accessToken = localStorage.getItem("access_token");
+		console.log("Initial access token check:", accessToken);
+		return !!accessToken;
+	});
 
-  useEffect(() => {
-    const savedProvider =
-      (localStorage.getItem("aiProvider") as "openai" | "anthropic") ||
-      "openai";
-    const savedKey = localStorage.getItem(`${savedProvider}ApiKey`);
-    const savedPaymanKey = localStorage.getItem("paymanApiKey");
+	const startNewSession = () => {
+		// Dispatch a custom event that ChatInterface can listen to
+		window.dispatchEvent(new CustomEvent("startNewSession"));
+	};
 
-    setProvider(savedProvider);
-    if (savedKey) {
-      setApiKey(savedKey);
-      setIsKeySaved(true);
-    }
-    if (savedPaymanKey) {
-      setPaymanApiKey(savedPaymanKey);
-      setIsPaymanKeySaved(true);
-    }
-  }, [setApiKey, setProvider, setPaymanApiKey]);
+	// Add OAuth listener effect
+	useEffect(() => {
+		const handleMessage = async (event: MessageEvent) => {
+			console.log("OAuth Listener: Received message:", event.data);
+			if (event.data.type === "payman-oauth-redirect") {
+				console.log("OAuth Listener: Processing redirect");
+				const url = new URL(event.data.redirectUri);
+				const code = url.searchParams.get("code");
+				console.log("OAuth Listener: Received code:", code);
 
-  const handleSaveKey = () => {
-    const trimmedValue = apiKey.trim();
-    const trimmedPaymanValue = paymanApiKey.trim();
+				if (code) {
+					try {
+						console.log("OAuth Listener: Making token exchange request");
+						const response = await fetch("/api/auth/token", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ code }),
+						});
 
-    if (!trimmedValue) {
-      setError("Please enter an API key for the selected AI provider");
-      setIsKeySaved(false);
-      localStorage.removeItem(`${provider}ApiKey`);
-      toast.error("Please enter an API key for the selected AI provider");
-      return;
-    }
+						if (!response.ok) {
+							const errorText = await response.text();
+							console.error("OAuth Listener: Token exchange failed:", {
+								status: response.status,
+								statusText: response.statusText,
+								error: errorText,
+							});
+							throw new Error("Failed to exchange code for token");
+						}
 
-    if (!trimmedPaymanValue) {
-      setError("Please enter your Payman API key");
-      setIsPaymanKeySaved(false);
-      localStorage.removeItem("paymanApiKey");
-      toast.error("Please enter your Payman API key");
-      return;
-    }
+						const data = await response.json();
+						console.log("OAuth Listener: Token exchange successful:", data);
+						console.log("OAuth Listener: Access token:", data.accessToken);
 
-    setError("");
-    setApiKey(trimmedValue);
-    setPaymanApiKey(trimmedPaymanValue);
-    localStorage.setItem(`${provider}ApiKey`, trimmedValue);
-    localStorage.setItem("paymanApiKey", trimmedPaymanValue);
-    localStorage.setItem("aiProvider", provider);
-    setIsKeySaved(true);
-    setIsPaymanKeySaved(true);
-    toast.success("Settings saved successfully");
-  };
+						// Save token to localStorage
+						localStorage.setItem("access_token", data.accessToken);
+						console.log("OAuth Listener: Token saved to localStorage");
 
-  const handleProviderChange = (newProvider: "openai" | "anthropic") => {
-    setProvider(newProvider);
-    const savedKey = localStorage.getItem(`${newProvider}ApiKey`);
-    if (savedKey) {
-      setApiKey(savedKey);
-      setIsKeySaved(true);
-    } else {
-      setApiKey("");
-      setIsKeySaved(false);
-    }
-  };
+						// Update connected state
+						setIsConnected(true);
 
-  return (
-    <div className="p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-white">
-      <h2 className="text-sm font-semibold text-gray-900 mb-3">
-        Configuration
-      </h2>
+						// Wait a moment to ensure localStorage is updated
+						await new Promise((resolve) => setTimeout(resolve, 100));
 
-      <div className="space-y-3">
-        {/* Info Section */}
-        <div className="p-3 bg-payman-primary/5 rounded-lg border border-payman-primary/20">
-          <div className="flex items-start space-x-2">
-            <div className="flex-shrink-0 w-4 h-4 mt-0.5">
-              {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="text-payman-primary"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xs font-medium text-gray-900">
-                Configure Your Paygent
-              </h3>
-              <p className="mt-0.5 text-xs text-gray-700">
-                1. Choose your AI provider (OpenAI or Anthropic) and enter your
-                API key.
-              </p>
-              <p className="mt-1 text-xs text-gray-700">
-                2. Sign up at{" "}
-                <a
-                  href="https://app.paymanai.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-payman-primary hover:text-payman-primary/80 underline"
-                >
-                  app.paymanai.com
-                </a>{" "}
-                to get your API key to give your Paygent a cash account.
-              </p>
-            </div>
-          </div>
-        </div>
+						// Verify token was saved
+						const savedToken = localStorage.getItem("access_token");
+						console.log("OAuth Listener: Verified saved token:", savedToken);
 
-        {/* Provider Selection */}
-        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
-          {/* biome-ignore lint/a11y/noLabelWithoutControl: <explanation> */}
-          <label className="block text-xs font-medium text-gray-800 mb-1.5">
-            AI Provider
-          </label>
-          <div className="flex space-x-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleProviderChange("openai");
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
-                provider === "openai"
-                  ? "bg-payman-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              OpenAI
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleProviderChange("anthropic");
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer z-10 relative ${
-                provider === "anthropic"
-                  ? "bg-payman-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Anthropic
-            </button>
-          </div>
-        </div>
+						// Log the current URL for debugging
+						console.log("OAuth Listener: Current URL:", window.location.href);
 
-        {/* AI Provider Key Input */}
-        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
-          <label
-            htmlFor="apiKey"
-            className="block text-xs font-medium text-gray-800 mb-1.5"
-          >
-            {provider === "openai" ? "OpenAI" : "Anthropic"} API Key
-          </label>
-          <input
-            id="apiKey"
-            type="password"
-            value={apiKey}
-            onChange={(e) => {
-              setApiKey(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSaveKey();
-              }
-            }}
-            onBlur={(e) => {
-              const trimmedValue = e.target.value.trim();
-              if (trimmedValue !== e.target.value) {
-                setApiKey(trimmedValue);
-              }
-            }}
-            className="w-full px-2 py-1.5 bg-gray-50/50 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary transition-all duration-300"
-            placeholder={`Enter your ${
-              provider === "openai" ? "OpenAI" : "Anthropic"
-            } API key`}
-          />
-        </div>
+						// Instead of redirecting, just log what would have happened
+						console.log("OAuth Listener: Would redirect to:", url.toString());
+					} catch (error) {
+						console.error("OAuth Listener: Error:", error);
+					}
+				} else {
+					console.log("OAuth Listener: No code found in URL");
+				}
+			} else {
+				console.log(
+					"OAuth Listener: Received message with unexpected type:",
+					event.data.type,
+				);
+			}
+		};
 
-        {/* Payman API Key Input */}
-        <div className="p-2 bg-white/80 rounded-lg shadow-sm border border-gray-100">
-          <label
-            htmlFor="paymanApiKey"
-            className="block text-xs font-medium text-gray-800 mb-1.5"
-          >
-            Payman API Key
-          </label>
-          <input
-            id="paymanApiKey"
-            type="password"
-            value={paymanApiKey}
-            onChange={(e) => {
-              setPaymanApiKey(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSaveKey();
-              }
-            }}
-            onBlur={(e) => {
-              const trimmedValue = e.target.value.trim();
-              if (trimmedValue !== e.target.value) {
-                setPaymanApiKey(trimmedValue);
-              }
-            }}
-            className="w-full px-2 py-1.5 bg-gray-50/50 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-payman-primary/30 focus:border-payman-primary transition-all duration-300"
-            placeholder="Enter your Payman API key"
-          />
-          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-        </div>
+		window.addEventListener("message", handleMessage);
+		return () => window.removeEventListener("message", handleMessage);
+	}, []);
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleSaveKey}
-            className="px-3 py-1.5 bg-payman-primary text-white rounded-md text-xs font-medium hover:bg-payman-primary/90 transition-colors duration-300 cursor-pointer z-10 relative"
-          >
-            {isKeySaved && isPaymanKeySaved ? "Update Keys" : "Save Keys"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<div className="p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+			<h2 className="text-sm font-semibold text-gray-900 mb-3">
+				Configuration
+			</h2>
+
+			<div className="space-y-3">
+				{/* Info Section */}
+				<div className="p-3 bg-payman-primary/5 rounded-lg border border-payman-primary/20">
+					<div className="flex items-start space-x-2">
+						<div className="flex-shrink-0 w-4 h-4 mt-0.5">
+							{/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								className="text-payman-primary"
+							>
+								<path
+									fillRule="evenodd"
+									d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z"
+									clipRule="evenodd"
+								/>
+							</svg>
+						</div>
+						<div>
+							<h3 className="text-xs font-medium text-gray-900">
+								Configure Your Paygent
+							</h3>
+						</div>
+					</div>
+				</div>
+
+				{/* Buttons Section */}
+				{isConnected ? (
+					<div className="flex justify-end space-x-3">
+						<button
+							type="button"
+							onClick={startNewSession}
+							className="px-4 py-2 bg-payman-neutral text-payman-dark rounded-xl hover:bg-payman-neutral/80 focus:outline-none focus:ring-2 focus:ring-payman-primary/30 transition-all font-medium shadow-sm"
+						>
+							New Session
+						</button>
+						<button
+							type="button"
+							className="px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all font-medium shadow-sm"
+							disabled
+						>
+							Connected
+						</button>
+					</div>
+				) : (
+					<>
+						<div
+							className="flex justify-end space-x-3"
+							id="payman-btn-target"
+						/>
+						<Script
+							src="/pm-dev.js"
+							data-client-id="pm-test-2xi-kmgTa875Qj4qbP_REKM0"
+							data-client-secret="ymtpcv3ffoXuY-735D6qGR05EuHml-u1183tSqQzJ7CjoK6LdSdbAJuZ41YZwlR6"
+							data-redirect-uri="http://localhost:3000"
+							data-scopes="read:balance"
+							data-target="#payman-btn-target"
+							data-dark-mode="false"
+							strategy="afterInteractive"
+						/>
+					</>
+				)}
+			</div>
+		</div>
+	);
 }
