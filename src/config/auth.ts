@@ -3,8 +3,8 @@ export const API_CONFIG = {
 } as const;
 
 export const AUTH_CONFIG = {
-	clientId: "pm-test-uRS7il77lAQftrXicg1CJoRF",
+	clientId: "pm-test-8BKTzvkiZSmrXpteo9MOgvIL",
 	clientSecret:
-		"vOBvp3woD1_5c_xpMolwX_ID9tgYXfpOadMB0-AdLE1vMQ-pZYXmPFm-Sj0RP-5Y",
+		"i6rec86x5AdK-NTRnaUNuTuXHYk2dSK_KNhvmz4BUp_g4aT26XjwZivjYDiIgaPN",
 	tokenEndpoint: `${API_CONFIG.host}/oauth2/token`,
 } as const;

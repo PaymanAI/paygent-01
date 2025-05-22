@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from "react";
 import Script from "next/script";
+import { PaymanClient } from "@paymanai/payman-ts";
+import { AUTH_CONFIG } from "@/config/auth";
 
 export function ConfigSection() {
 	const [isConnected, setIsConnected] = useState(false);
 
 	useEffect(() => {
 		const accessToken = localStorage.getItem("access_token");
-		console.log("Initial access token check:", accessToken);
 		setIsConnected(!!accessToken);
 	}, []);
 
 	const startNewSession = () => {
 		window.dispatchEvent(new CustomEvent("startNewSession"));
+	};
+
+	const initializePayman = () => {
+		try {
+			const client = new PaymanClient({
+				clientId: AUTH_CONFIG.clientId,
+				clientSecret: AUTH_CONFIG.clientSecret,
+			});
+			console.log("Payman client initialized successfully");
+			// You can store the client instance in state or context if needed
+		} catch (error) {
+			console.error("Failed to initialize Payman client:", error);
+		}
 	};
 
 	// Add OAuth listener effect
@@ -131,21 +145,15 @@ export function ConfigSection() {
 								Connected
 							</button>
 						</>
-					) : null}
-					<div
-						className="flex justify-end w-full"
-						id="payman-btn-target"
-						style={{ display: isConnected ? "none" : "flex" }}
-					/>
-					<Script
-						src="/pm-dev.js"
-						data-client-id="pm-test-uRS7il77lAQftrXicg1CJoRF"
-						data-redirect-uri="http://localhost:3000"
-						data-scopes="read:balance"
-						data-target="#payman-btn-target"
-						data-dark-mode="false"
-						strategy="afterInteractive"
-					/>
+					) : (
+						<button
+							type="button"
+							onClick={initializePayman}
+							className="px-4 py-2 bg-payman-primary text-white transition-all font-medium bg-black"
+						>
+							Connect Payman
+						</button>
+					)}
 				</div>
 			</div>
 		</div>
