@@ -44,7 +44,7 @@ export function ChatInterface() {
 		const paymanClient = new PaymanClient({
 			clientId: AUTH_CONFIG.clientId,
 			clientSecret: AUTH_CONFIG.clientSecret,
-			environment: "INTERNAL",
+			environment: "TEST",
 		});
 		setClient(paymanClient);
 	}, []);
