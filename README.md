@@ -17,7 +17,7 @@ Just spin up the app, add your Payman API key and you're ready to go!
 ### 1. Clone and Install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/PaymanAI/paygent-01.git
 cd paygent-01
 npm install
 ```
@@ -44,4 +44,4 @@ To switch to live mode toggle the switch in the top right corner of the app.
 
 **Note:** Live mode requires an active Payman API key. Go to https://app.paymanai.com to get one.
 
-You can now copy this entire code block and paste it directly into your README.md file. The markdown formatting will be preserved and will render properly on GitHub.
+
